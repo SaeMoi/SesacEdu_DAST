@@ -891,8 +891,8 @@ body.cp-linking .cp-node:hover { outline: 2px solid var(--accent); }
 .hs-seg.st-fixed, .sw.st-fixed { background: var(--st-fixed); }
 .hs-seg.st-false_positive, .sw.st-false_positive { background: repeating-linear-gradient(45deg, var(--st-fp) 0 4px, var(--surface) 4px 7px); text-decoration: none; }
 
-.totals { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 1100px) { .totals { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1100px) { .totals { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .tot { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--surface);
        border: 1px solid var(--line); border-radius: var(--radius); }
 .tot small { font-size: 12px; color: var(--sub); }
@@ -966,7 +966,7 @@ body.cp-linking .cp-node:hover { outline: 2px solid var(--accent); }
 .cal-src { margin: 0; text-align: center; }
 .add-target { margin-bottom: 12px; }
 
-/* ── 결과 탭 레퍼런스 반영(11-20): 상태 문장 · 주간 변화 · 스파크라인 · 비율 막대 · 누적 추이 · 도넛 ──
+/* ── 결과 탭 레퍼런스 반영(11-20): 상태 문장 · 비율 막대 · 도넛(주간 변화·스파크라인·누적 추이는 사용자 결정으로 뺌) ──
    노션 '대시보드 딸깍이 제작' 의 레퍼런스(Security Watch·Mosaic·Creator Dashboard)에서 그래프 모양만 가져왔다.
    색은 '보고서 디자인 레퍼런스' 대로 바탕·먹·포인트 셋 — 스파크라인·추이는 포인트색, 상태 막대만 위험도 색. */
 .ov-status { border-left: 4px solid var(--ok-bar, var(--accent)); padding: 2px 0 2px 14px; }
@@ -976,30 +976,11 @@ body.cp-linking .cp-node:hover { outline: 2px solid var(--accent); }
 .ov-status.ov-alert { --ok-bar: var(--sv-critical); }
 .ov-status.ov-warn { --ok-bar: var(--sv-high); }
 .tot { position: relative; overflow: hidden; }
-.tot-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.dpill { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
-         background: var(--surface-2); border: 1px solid var(--line); color: var(--sub); font-variant-numeric: tabular-nums; }
-.dpill.up { color: var(--text); border-color: var(--accent); }
-.dpill.down { color: var(--sub); }
-.spark { display: block; width: 100%; height: 26px; margin-top: 6px; }
-.spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .ratio { display: flex; gap: 2px; height: 6px; border-radius: 3px; background: var(--cal-0); overflow: hidden; margin: 6px 0 2px; }
 .ratio i { display: block; height: 100%; background: var(--sv-critical); }
 .tot:nth-child(3) .ratio i { background: var(--sv-high); }
 .ratio i.r2 { background: var(--cov-clear-ink); opacity: .55; }
 
-.trend { margin: 0; }
-.trend-box { position: relative; height: 150px; }
-.trend-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.trend-svg .grid { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.trend-svg .area { fill: var(--accent-soft); }
-.trend-svg .line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-.tmark { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--sub); }
-.tmark > span { position: absolute; top: 0; left: 4px; font-size: 11px; color: var(--sub); white-space: nowrap; background: var(--surface); padding: 0 3px; }
-.tmark-final { border-left: 2px solid var(--text); } .tmark-final > span { color: var(--text); font-weight: 700; left: auto; right: 4px; }
-.tmark-today { border-left: 2px solid var(--accent); } .tmark-today > span { color: var(--accent); font-weight: 700; top: 18px; }
-.tval { position: absolute; left: 0; top: 2px; font-size: 11px; color: var(--sub); }  /* 세로축 위 끝 값 — 오른쪽은 최종보고회 표시와 겹친다 */
-.trend-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--sub); margin-top: 2px; }
 
 .donut-row { display: flex; align-items: center; gap: 22px; }
 .donut { width: 128px; height: 128px; border-radius: 50%; display: grid; place-items: center; flex: none; }
@@ -1008,3 +989,27 @@ body.cp-linking .cp-node:hover { outline: 2px solid var(--accent); }
 .donut-hole strong { font-size: 22px; font-variant-numeric: tabular-nums; }
 .donut-hole small { font-size: 11px; color: var(--sub); }
 .legend-list a { color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── 모듈 팝업(11-20): 왼쪽 설정·실행, 오른쪽 이 대상이 모은 지점 ── */
+.mod-dialog { width: min(1280px, 96vw); max-height: 92vh; padding: 0; border: 1px solid var(--line);
+              border-radius: var(--radius); background: var(--bg); color: var(--text); }
+.mod-dialog::backdrop { background: rgba(28, 28, 28, .45); }
+.mp { display: flex; flex-direction: column; max-height: 92vh; }
+.mp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 20px 10px;
+           border-bottom: 1px solid var(--line); background: var(--surface); }
+.mp-head h2 { margin: 6px 0 0; font-size: 18px; }
+.mp-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px 20px; overflow: auto; }
+.mp-grid.with-surface { grid-template-columns: 340px minmax(0, 1fr); }
+@media (max-width: 900px) { .mp-grid.with-surface { grid-template-columns: minmax(0, 1fr); } }
+.mp-side { display: flex; flex-direction: column; gap: 10px; background: var(--surface); border: 1px solid var(--line);
+           border-radius: var(--radius); padding: 14px; align-self: start; position: sticky; top: 0; }
+.mp-side p { margin: 0; }
+.mp-form { display: flex; flex-direction: column; gap: 10px; }
+.mp-run { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.mp-run label.check { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.mp-surface { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.mp-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.mp-pick { margin-left: auto; display: inline-flex; gap: 6px; }
+.mp-table { max-height: 62vh; overflow: auto; }
+.mp-table tr.mp-sug td { background: var(--accent-soft); }
+.sg-dot { font-size: 10px; font-weight: 700; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 6px; }
