@@ -8,7 +8,7 @@ from markupsafe import Markup, escape
 
 from . import db, wordlists
 from .core import SEVERITY_LABEL, fmt_kst
-from .registry import group_targets, load_catalog
+from .registry import RUN_VERB, group_targets, load_catalog
 
 __version__ = "0.2.0"
 
@@ -56,6 +56,8 @@ def create_app(test_config=None):
         RUNS_DIR=env("DASH_RUNS_DIR") or str(instance / "runs"),
         SCOPE_HOSTS=[h.strip().lower() for h in env("DASH_SCOPE", DEFAULT_SCOPE).split(",") if h.strip()],
         SELF_PORT=int(env("DASH_PORT", "5050")),           # 이 주소는 점검 대상에서 뺀다
+        # 붙여 넣는 칸(HAR·도구 결과)이 몇 MB 가 된다. Flask 기본(500KB)이면 HAR 가 잘린다
+        MAX_FORM_MEMORY_SIZE=int(env("DASH_MAX_FORM_MB", "30")) * 1024 * 1024,
         # 들어와도 되는 Host 이름. 기본은 내 PC 뿐이고, 서버에 올려 밖에서 열 때만 적는다.
         # `*` 는 아무 이름이나 받는다 — 공인 IP 가 중지·시작마다 바뀌는 자리용.
         ALLOWED_HOSTS=[h.strip().lower() for h in env("DASH_ALLOWED_HOSTS", "").split(",") if h.strip()],
@@ -102,7 +104,7 @@ def create_app(test_config=None):
     def csrf_field():
         return Markup('<input type="hidden" name="_csrf" value="%s">' % escape(csrf_token()))
 
-    app.jinja_env.globals.update(SEVERITY_LABEL=SEVERITY_LABEL, STATUSES=db.STATUSES, PROJECTS=app.config["PROJECTS"],
+    app.jinja_env.globals.update(SEVERITY_LABEL=SEVERITY_LABEL, RUN_VERB=RUN_VERB, STATUSES=db.STATUSES, PROJECTS=app.config["PROJECTS"],
                                  csrf_token=csrf_token, csrf_field=csrf_field, VERSION=__version__,
                                  wordlist_options=wordlists.available)
 

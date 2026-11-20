@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from .attack import TACTIC_ORDER
 from .core import SEVERITIES
+from . import standards
 
 REQUIRED = ("id", "name", "category", "kind", "attack", "description")
 KINDS = ("passive", "active")
@@ -19,7 +20,9 @@ KINDS = ("passive", "active")
 # probe:   run(target, points, params) → [Check]  수집된 지점 단위 점검
 # tool:    run(target, params) → ToolResult  도구 탭에서 값을 넣고 바로 결과를 보는 것
 STAGES = ("collect", "check", "probe", "tool")
-STAGE_LABEL = {"collect": "표면 수집", "check": "대상 점검", "probe": "지점 점검", "tool": "도구"}
+STAGE_LABEL = {"collect": "표면 수집", "check": "대상 점검", "probe": "지점 점검", "tool": "탐색"}
+# 모듈 카드의 실행 버튼 글자. 단계마다 하는 일이 달라 '실행' 하나로 두지 않는다.
+RUN_VERB = {"collect": "수집", "check": "점검", "probe": "지점 골라 점검", "tool": "실행"}
 GENERAL = "general"  # 어느 프로젝트에도 속하지 않는 대상
 # 연습용 묶음 이름. 프로젝트 이름을 쓰지 않는 것이 요점이다 — 점검 범위가 아니다.
 PRACTICE_LABEL = "연습용 — 실서버 아님"
@@ -43,6 +46,12 @@ class ModuleInfo:
     needs: list = field(default_factory=list)  # 실행 전에 미리 준비해야 하는 것(토큰·환경변수 등)
     cvss: str = ""  # 이 모듈이 찾는 것의 전형적인 CVSS 벡터(제안값 — 사람이 고쳐 쓴다)
     vuln: str = "기타"  # 노션 '웹 서비스 취약점 목록' 의 취약점 유형
+    kisa: list = field(default_factory=list)  # 주요정보통신기반시설 웹 항목 코드(standards.KISA)
+
+    @property
+    def owasp(self) -> list:
+        """OWASP Top 10 2025 키. kisa 코드에서 정해진다."""
+        return standards.owasp_of(self.kisa)
 
     @property
     def stage_label(self) -> str:
@@ -63,6 +72,7 @@ class ProjectInfo:
     roles: dict = field(default_factory=dict)  # {역할 id: {"name": 보일 이름, "scope": [허용 범위]}}
     # 화면에서는 이것을 '점검 대상' 이라고 부른다(2026-11-06). 코드·DB 이름은 role 로 둔다.
     login: dict = field(default_factory=dict)  # 로그인해서 토큰 받는 법(서비스마다 다르다)
+    schedule: dict = field(default_factory=dict)  # 프로젝트 기간·마감일(결과 탭 '진단 일정')
 
     def role_name(self, role: str) -> str:
         return self.roles.get(role, {}).get("name", role)
@@ -179,6 +189,7 @@ def discover(package_name: str = "modules", project: str = ""):
                 stage=meta.get("stage", "check"), severity=meta.get("severity", "medium"),
                 roles=meta.get("roles", []), needs=needs_mod.validate(meta.get("needs")),
                 cvss=_check_cvss(meta.get("cvss", "")), vuln=_check_vuln(meta.get("vuln", "")),
+                kisa=standards.check_kisa(meta.get("kisa")),
             )
         except Exception as e:  # noqa: BLE001 — 깨진 모듈은 화면에 오류로 보여 준다
             errors.append((source, str(e)))
@@ -202,7 +213,7 @@ def discover_projects(package_name: str = "projects"):
             projects[pid] = ProjectInfo(id=pid, name=meta["name"], scope=[h.lower() for h in meta["scope"]],
                                         description=meta.get("description", ""), source=source,
                                         roles=_norm_roles(meta.get("roles", {})),
-                                        login=meta.get("login") or {})
+                                        login=meta.get("login") or {}, schedule=meta.get("schedule") or {})
         except Exception as e:  # noqa: BLE001
             errors.append((source, str(e)))
             continue
