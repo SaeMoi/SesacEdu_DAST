@@ -6,7 +6,7 @@ from urllib.parse import quote, urlsplit
 from flask import (Blueprint, Response, abort, current_app, flash, g, get_flashed_messages, jsonify, redirect,
                    render_template, request, url_for)
 
-from . import board, campaign, cve, cvss, discovery as dv, grouping, jobs, login as login_mod, mcp as mcp_mod, needs, runfiles, scope, stats, wordlists
+from . import board, campaign, cve, cvss, discovery as dv, grouping, jobs, login as login_mod, mcp as mcp_mod, needs, runfiles, scope, standards, stats, wordlists
 from .attack import TACTIC_NAME, TACTIC_ORDER, TACTICS, technique_url
 from .core import (SEVERITIES, SEVERITY_LABEL, VERDICTS, Check, Finding, Point, RunContext, Target,
                    ToolResult, fmt_kst, now_iso)
@@ -1418,38 +1418,61 @@ def report_json(tid):
                     headers={"Content-Disposition": f"attachment; filename=report_{tid}.json"})
 
 
+# 팀 결과보고서 양식의 자산 ID·구역. 역할 하나가 자산 하나다
+# (`01_제출물/결과보고서_양식/1_결과보고서_양식.md` 의 공통 ID 체계).
+ASSETS = {"user_web": ("A-01", "외부(DMZ)"), "admin_web": ("A-02", "관리·내부"),
+          "admin_api": ("A-03", "관리·내부")}
+
+
 @bp.get("/report/<int:tid>.docx")
 def report_docx(tid):
-    """내려받기 단추가 주는 것 — Word(11-21 사용자 지시: 보고서는 md 말고 워드로)."""
+    """내려받기 단추가 주는 것 — 팀 결과보고서 양식에 맞춘 Word(11-21 사용자 지시)."""
     from io import BytesIO
 
+    from . import __version__
     from . import report_docx as maker
 
     t, rows, exchanges = _report_rows(tid)
     mods = _modules()
-    meta = {
-        "practice": _is_practice(t), "project": _project_of(t).name, "role": _role_label(t),
-        "written": fmt_kst(now_iso()),
-        "summary": [{"severity": SEVERITY_LABEL[r["severity"]], "title": r["title"], "location": r["location"],
-                     "technique": r["technique"] or "", "status": STATUSES.get(r["status"], r["status"])}
-                    for r in rows],
-        "items": [],
-    }
+    asset, zone = ASSETS.get(t["role"], ("[ ]", "[ ]"))
+    rank = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+    top = {}
+    for r in rows:
+        key = r["module_id"]
+        if key not in top or rank.get(r["severity"], 9) < rank.get(top[key], 9):
+            top[key] = r["severity"]
+    items = []
     for r in rows:
         mod = mods.get(r["module_id"])
         rated = _rate(r["cvss_vector"] if "cvss_vector" in r.keys() else "", mod)
-        saved = rated and rated["saved"]
-        meta["items"].append({
-            "description": f'{r["title"]} — {mod.description if mod else ""}',
-            "impact": rated["impact_text"] if saved else
-                      ((rated["impact_text"] + " — 미확정(모듈 제안값)") if rated else "미평가"),
-            "vector": rated["vector"] if rated else "—",
-            "module": mod.name if mod else r["module_id"],
-            "attack": f'{r["technique"]} ({technique_url(r["technique"])})' if r["technique"] else "—",
-            "status": STATUSES.get(r["status"], r["status"]),
+        x = exchanges.get(r["id"]) or {}
+        items.append({
+            "module_id": r["module_id"], "module_name": mod.name if mod else r["module_id"],
+            "module_desc": (mod.description if mod else "").replace("**", ""),
+            # 항목 코드 — KISA 21항목이 있으면 그것, 없으면 자체 항목(X-xx). 비워 두지 않는다
+            "kisa": (" · ".join(standards.item_label(c) for c in (mod.kisa if mod else []))
+                     or (standards.item_label(mod.item) if mod and mod.item else "")),
+            "owasp": " · ".join(f"{k} {standards.OWASP_NAME[k]}" for k in (mod.owasp if mod else [])),
+            "title": r["title"], "location": r["location"], "severity": r["severity"],
+            "severity_label": SEVERITY_LABEL[r["severity"]],
+            "top_severity": SEVERITY_LABEL[top.get(r["module_id"], r["severity"])],
+            # 사람이 화면에서 벡터를 확정했으면 그 점수, 아직이면 모듈 제안값에 '(제안)' 을 붙인다.
+            # 비워 두면 보고서에서 '점수 없음' 으로 읽힌다(11-22 사용자 지적)
+            "cvss_score": ("" if not rated else
+                           (f'{rated["score"]}' if rated["saved"] else f'{rated["score"]} (제안)')),
+            "cvss_vector": (rated or {}).get("vector", ""),
+            "status_label": STATUSES.get(r["status"], r["status"]),
+            "recommendation": r["recommendation"] or "",
+            "evidence": r["evidence"] or "", "request": x.get("request", ""), "response": x.get("response", ""),
+            "method": maker._method_of(x.get("request", "")),
         })
+    doc_meta = {
+        "practice": _is_practice(t), "project": _project_of(t).name, "written": fmt_kst(now_iso()),
+        "target_name": t["name"], "url": t["url"], "asset_id": asset, "zone": zone,
+        "tool": f"딸깍이 {__version__}",
+    }
     buf = BytesIO()
-    maker.build(t, rows, exchanges, meta, buf)
+    maker.build(doc_meta, items, buf)
     buf.seek(0)
     name = f"점검결과_{_slug_name(t['name'])}_{now_iso()[:10]}.docx"
     return Response(buf.read(), mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
